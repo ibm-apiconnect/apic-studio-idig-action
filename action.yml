@@ -1,0 +1,19 @@
+name: 'Zip and Publish API Studio Files'
+description: 'Zips files and publishes to IDIG'
+inputs:
+  idig_host:
+    description: 'Domain name of the API Connect IDIG instance where API Studio files will be published'
+    required: true
+  platform_idig_prefix:
+    description: 'Platform IDIG Prefix'
+    required: false
+  changed_files:
+    description: 'Files changed between current and previous commit'
+    required: false
+    
+outputs:
+  action-result:
+    description: 'Result of the operation to publish API Studio project files to IDIG'
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
