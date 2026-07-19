@@ -33965,14 +33965,6 @@ module.exports = {
 
 /***/ }),
 
-/***/ 9320:
-/***/ ((module) => {
-
-module.exports = eval("require")("js-yaml");
-
-
-/***/ }),
-
 /***/ 75:
 /***/ ((module) => {
 
@@ -35869,7 +35861,6 @@ module.exports = parseParams
 
 const fs = __nccwpck_require__(9896);
 const path = __nccwpck_require__(6928);
-const yaml = __nccwpck_require__(9320);
 const FormData = __nccwpck_require__(6454);
 const axios = __nccwpck_require__(7269);
 const AdmZip = __nccwpck_require__(1316);
@@ -42014,7 +42005,7 @@ async function run() {
       : [];
     
     if (changedFolders.length !== 0) {
-        await execution(workspacePath, changedFolders, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized);
+        await execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, nodeTlsRejectUnauthorized);
     } else {
         core.setOutput('action-result', 'No files changed from the previous commit to send to Discovery Service');
     }
@@ -42023,7 +42014,7 @@ async function run() {
   }
 }
 
-async function execution(idigHost, platformIdigPrefix, workspacePath, githubServer, repoLocation, nodeTlsRejectUnauthorized) {
+async function execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, nodeTlsRejectUnauthorized) {
     try {
         core.info(`IDIG Host ${idigHost}`);
         const resp = await publishProjects(workspacePath, changedFolders, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized);

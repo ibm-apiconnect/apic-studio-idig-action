@@ -15,7 +15,7 @@ async function run() {
       : [];
     
     if (changedFolders.length !== 0) {
-        await execution(workspacePath, changedFolders, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized);
+        await execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, nodeTlsRejectUnauthorized);
     } else {
         core.setOutput('action-result', 'No files changed from the previous commit to send to Discovery Service');
     }
@@ -24,7 +24,7 @@ async function run() {
   }
 }
 
-async function execution(idigHost, platformIdigPrefix, workspacePath, githubServer, repoLocation, nodeTlsRejectUnauthorized) {
+async function execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, nodeTlsRejectUnauthorized) {
     try {
         core.info(`IDIG Host ${idigHost}`);
         const resp = await publishProjects(workspacePath, changedFolders, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized);

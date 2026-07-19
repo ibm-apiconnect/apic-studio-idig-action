@@ -1,7 +1,6 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
 const FormData = require('form-data');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
