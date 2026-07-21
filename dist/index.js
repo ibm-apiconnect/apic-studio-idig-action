@@ -34029,6 +34029,14 @@ module.exports = require("diagnostics_channel");
 
 /***/ }),
 
+/***/ 2250:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("dns");
+
+/***/ }),
+
 /***/ 4434:
 /***/ ((module) => {
 
@@ -35861,6 +35869,7 @@ module.exports = parseParams
 
 const fs = __nccwpck_require__(9896);
 const path = __nccwpck_require__(6928);
+const dns = __nccwpck_require__(2250);
 const FormData = __nccwpck_require__(6454);
 const axios = __nccwpck_require__(7269);
 const AdmZip = __nccwpck_require__(1316);
@@ -35913,6 +35922,12 @@ let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, 
 
 let createOrUpdateProjects = async function(curlUrl, bodyContent, method, contentType, contentLength) {
     console.log('createOrUpdateProjects');
+    const hostname = new URL(curlUrl).hostname;
+    await new Promise(resolve => dns.lookup(hostname, (err, address) => {
+        if (err) console.log(`DNS lookup failed for ${hostname}: ${err.message}`);
+        else console.log(`DNS resolved ${hostname} -> ${address}`);
+        resolve();
+    }));
     try {
         const resp = await axios.post(curlUrl, bodyContent, {
             maxContentLength: Infinity,
@@ -35931,8 +35946,10 @@ let createOrUpdateProjects = async function(curlUrl, bodyContent, method, conten
         });
         return resp;
     } catch (err) {
-        console.log(err);
-        return { status: 500, message: [ err.message || String(err) ] };
+        const status = err.response?.status || 500;
+        const message = err.response?.data?.message || [ err.message || String(err) ];
+        console.log(`Error status: ${status}, message: ${JSON.stringify(message)}`);
+        return { status, message };
     }
 };
 

@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const dns = require('dns');
 const FormData = require('form-data');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
@@ -53,6 +54,12 @@ let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, 
 
 let createOrUpdateProjects = async function(curlUrl, bodyContent, method, contentType, contentLength) {
     console.log('createOrUpdateProjects');
+    const hostname = new URL(curlUrl).hostname;
+    await new Promise(resolve => dns.lookup(hostname, (err, address) => {
+        if (err) console.log(`DNS lookup failed for ${hostname}: ${err.message}`);
+        else console.log(`DNS resolved ${hostname} -> ${address}`);
+        resolve();
+    }));
     try {
         const resp = await axios.post(curlUrl, bodyContent, {
             maxContentLength: Infinity,
@@ -71,8 +78,10 @@ let createOrUpdateProjects = async function(curlUrl, bodyContent, method, conten
         });
         return resp;
     } catch (err) {
-        console.log(err);
-        return { status: 500, message: [ err.message || String(err) ] };
+        const status = err.response?.status || 500;
+        const message = err.response?.data?.message || [ err.message || String(err) ];
+        console.log(`Error status: ${status}, message: ${JSON.stringify(message)}`);
+        return { status, message };
     }
 };
 
