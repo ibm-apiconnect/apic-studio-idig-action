@@ -35889,7 +35889,7 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
     console.log(`Zip created at: ${zipPath}`);
     let curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/publish`;
     const formData = new FormData();
-    formData.append('zipFile', fs.createReadStream(zipPath), {
+    formData.append('zipFile', fs.readFileSync(zipPath), {
         filename: outputFile,
         contentType: 'application/zip'
     });
