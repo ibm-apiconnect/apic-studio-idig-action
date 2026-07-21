@@ -32,7 +32,7 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
         name: outputFile,
         contentType: 'application/zip'
     });
-    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST', 'multipart/form-data');
+    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST', formData.getHeaders()['content-type']);
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
     });
@@ -51,9 +51,11 @@ let createOrUpdateProjects = async function(curlUrl, bodyContent, method, conten
     console.log('createOrUpdateProjects');
     try {
         const resp = await axios.post(curlUrl, bodyContent, {
+            timeout: 30000,
             headers: {
                 Accept: 'application/json',
-                'Content-Type': contentType
+                'Content-Type': contentType,
+                ...bodyContent.getHeaders?.()
             }
         })
         .then(function(res) {
@@ -65,7 +67,7 @@ let createOrUpdateProjects = async function(curlUrl, bodyContent, method, conten
         return resp;
     } catch (err) {
         console.log(err);
-        return { status: 500, message: err };
+        return { status: 500, message: [ err.message || String(err) ] };
     }
 };
 
