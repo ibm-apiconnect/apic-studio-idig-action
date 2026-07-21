@@ -27,14 +27,12 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
     }
 
     const zipPath = zipFolders(workspacePath, folders);
-    console.log(`Zip created at: ${zipPath} (${fs.statSync(zipPath).size} bytes)`);
+    console.log(`Zip created at: ${zipPath}`);
     let curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/publish`;
-    const zipSize = fs.statSync(zipPath).size;
     const formData = new FormData();
-    formData.append('zip', fs.createReadStream(zipPath), {
+    formData.append('zipFile', fs.createReadStream(zipPath), {
         filename: outputFile,
-        contentType: 'application/zip',
-        knownLength: zipSize
+        contentType: 'application/zip'
     });
     const contentLength = await new Promise((resolve, reject) => formData.getLength((err, len) => err ? reject(err) : resolve(len)));
     const resp = await createOrUpdateProjects(curlUrl, formData, 'POST', formData.getHeaders()['content-type'], contentLength);
