@@ -1,7 +1,6 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const dns = require('dns');
 const FormData = require('form-data');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
@@ -34,8 +33,7 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
         filename: outputFile,
         contentType: 'application/zip'
     });
-    const contentLength = await new Promise((resolve, reject) => formData.getLength((err, len) => err ? reject(err) : resolve(len)));
-    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST', formData.getHeaders()['content-type'], contentLength);
+    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST');
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
     });
@@ -50,22 +48,15 @@ let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, 
     return null;
 }
 
-let createOrUpdateProjects = async function(curlUrl, bodyContent, method, contentType, contentLength) {
+let createOrUpdateProjects = async function(curlUrl, bodyContent, method) {
     console.log('createOrUpdateProjects');
-    const hostname = new URL(curlUrl).hostname;
-    await new Promise(resolve => dns.lookup(hostname, (err, address) => {
-        if (err) console.log(`DNS lookup failed for ${hostname}: ${err.message}`);
-        else console.log(`DNS resolved ${hostname} -> ${address}`);
-        resolve();
-    }));
     try {
         const resp = await axios.post(curlUrl, bodyContent, {
             maxContentLength: Infinity,
             maxBodyLength: Infinity,
             headers: {
                 Accept: 'application/json',
-                'Content-Type': contentType,
-                'Content-Length': contentLength
+                ...bodyContent.getHeaders()
             }
         })
         .then(function(res) {
