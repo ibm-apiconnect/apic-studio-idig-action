@@ -35892,7 +35892,8 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
         name: outputFile,
         contentType: 'application/zip'
     });
-    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST', formData.getHeaders()['content-type']);
+    const contentLength = await new Promise((resolve, reject) => formData.getLength((err, len) => err ? reject(err) : resolve(len)));
+    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST', formData.getHeaders()['content-type'], contentLength);
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
     });
@@ -35907,15 +35908,17 @@ let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, 
     return null;
 }
 
-let createOrUpdateProjects = async function(curlUrl, bodyContent, method, contentType) {
+let createOrUpdateProjects = async function(curlUrl, bodyContent, method, contentType, contentLength) {
     console.log('createOrUpdateProjects');
     try {
         const resp = await axios.post(curlUrl, bodyContent, {
             timeout: 30000,
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
             headers: {
                 Accept: 'application/json',
                 'Content-Type': contentType,
-                ...bodyContent.getHeaders?.()
+                'Content-Length': contentLength
             }
         })
         .then(function(res) {
