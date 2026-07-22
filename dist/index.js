@@ -35861,7 +35861,6 @@ module.exports = parseParams
 
 const fs = __nccwpck_require__(9896);
 const path = __nccwpck_require__(6928);
-const FormData = __nccwpck_require__(6454);
 const axios = __nccwpck_require__(7269);
 const AdmZip = __nccwpck_require__(1316);
 
@@ -35888,12 +35887,8 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
     const zipPath = zipFolders(workspacePath, folders);
     console.log(`Zip created at: ${zipPath}`);
     const curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/publish`;
-    const formData = new FormData();
-    formData.append('zipFile', fs.readFileSync(zipPath), {
-        filename: outputFile,
-        contentType: 'application/zip'
-    });
-    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST');
+    const zipFile = fs.readFileSync(zipPath).toString('base64');
+    const resp = await createOrUpdateProjects(curlUrl, { zipFile }, 'POST');
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
     });
@@ -35911,14 +35906,7 @@ let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, 
 let createOrUpdateProjects = async function(curlUrl, bodyContent, method) {
     console.log('createOrUpdateProjects');
     try {
-        const res = await axios.post(curlUrl, bodyContent, {
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
-            headers: {
-                Accept: 'application/json',
-                ...bodyContent.getHeaders()
-            }
-        });
+        const res = await axios.post(curlUrl, bodyContent);
         if (res.status === 201 || res.status === 200) {
             return { status: res.status, message: [ `${method} operation has been successful` ] };
         }
