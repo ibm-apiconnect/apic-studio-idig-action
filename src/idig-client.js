@@ -29,7 +29,7 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
     console.log(`Zip created at: ${zipPath}`);
     const curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/publish`;
     const formData = new FormData();
-    formData.append('zipFile', fs.createReadStream(zipPath), {
+    formData.append('zipFile', fs.readFileSync(zipPath), {
         filename: outputFile,
         contentType: 'application/zip'
     });
@@ -52,6 +52,8 @@ let createOrUpdateProjects = async function(curlUrl, bodyContent, method) {
     console.log('createOrUpdateProjects');
     try {
         const res = await axios.post(curlUrl, bodyContent, {
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity,
             headers: {
                 Accept: 'application/json',
                 ...bodyContent.getHeaders()
