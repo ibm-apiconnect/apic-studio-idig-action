@@ -33608,7 +33608,6 @@ let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, 
 }
 
 let createOrUpdateProjects = function(curlUrl, formData, method) {
-    console.log('createOrUpdateProjects');
     return new Promise((resolve) => {
         const url = new URL(curlUrl);
         const headers = formData.getHeaders({ Accept: 'application/json' });
@@ -33619,27 +33618,24 @@ let createOrUpdateProjects = function(curlUrl, formData, method) {
             method: 'POST',
             headers
         };
-        const req = https.request(options, (res) => {
+        const request = https.request(options, (response) => {
             let body = '';
-            res.on('data', (chunk) => { body += chunk; });
-            res.on('end', () => {
+            response.on('data', (chunk) => { body += chunk; });
+            response.on('end', () => {
                 let data;
                 try { data = JSON.parse(body); } catch { data = body; }
-                console.log(`Response status: ${res.statusCode}`);
-                if (res.statusCode === 200 || res.statusCode === 201) {
-                    resolve({ status: res.statusCode, message: [ `${method} operation has been successful` ] });
+                if (response.statusCode === 200 || response.statusCode === 201) {
+                    resolve({ status: response.statusCode, message: [ `${method} operation has been successful` ] });
                 } else {
                     const message = data?.message || [ body ];
-                    console.log(`Error status: ${res.statusCode}, message: ${JSON.stringify(message)}`);
-                    resolve({ status: res.statusCode, message });
+                    resolve({ status: response.statusCode, message });
                 }
             });
         });
-        req.on('error', (err) => {
-            console.log(`Request error: ${err.message}`);
+        request.on('error', (err) => {
             resolve({ status: 500, message: [ err.message ] });
         });
-        formData.pipe(req);
+        formData.pipe(request);
     });
 };
 
