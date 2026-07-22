@@ -33558,6 +33558,7 @@ module.exports = parseParams
 
 "use strict";
 
+const core = __nccwpck_require__(7484);
 const fs = __nccwpck_require__(9896);
 const path = __nccwpck_require__(6928);
 const https = __nccwpck_require__(5692);
@@ -33592,11 +33593,12 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
         filename: outputFile,
         contentType: 'application/zip'
     });
-    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST');
+    const response = await createOrUpdateProjects(curlUrl, formData, 'POST');
+    core.info(`Response: ${JSON.stringify(response)}`);
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
     });
-    return resp;
+    return response;
 }
 
 let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, nodeTlsRejectUnauthorized) {
