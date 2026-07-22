@@ -1,6 +1,7 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
+const FormData = require('form-data');
 const axios = require('axios');
 const AdmZip = require('adm-zip');
 
@@ -27,8 +28,12 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
     const zipPath = zipFolders(workspacePath, folders);
     console.log(`Zip created at: ${zipPath}`);
     const curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/publish`;
-    const zipFile = fs.readFileSync(zipPath).toString('base64');
-    const resp = await createOrUpdateProjects(curlUrl, { zipFile }, 'POST');
+    const formData = new FormData();
+    formData.append('zipFile', fs.createReadStream(zipPath), {
+        filename: outputFile,
+        contentType: 'application/zip'
+    });
+    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST');
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
     });
@@ -49,7 +54,7 @@ let createOrUpdateProjects = async function(curlUrl, bodyContent, method) {
         const res = await axios.post(curlUrl, bodyContent, {
             headers: {
                 Accept: 'application/json',
-                'Content-Type': 'application/json'
+                ...bodyContent.getHeaders()
             }
         });
         if (res.status === 201 || res.status === 200) {
