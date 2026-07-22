@@ -68,10 +68,10 @@ let createOrUpdateProjects = function(curlUrl, formData, method) {
                 let data;
                 try { data = JSON.parse(body); } catch { data = body; }
                 if (response.statusCode === 200 || response.statusCode === 201) {
-                    resolve({ status: response.statusCode, message: [ `${method} operation has been successful` ] });
+                    resolve({ status: response.statusCode, message: [ `${method} operation has been successful` ], data });
                 } else {
                     const message = data?.message || [ body ];
-                    resolve({ status: response.statusCode, message });
+                    resolve({ status: response.statusCode, message, data });
                 }
             });
         });

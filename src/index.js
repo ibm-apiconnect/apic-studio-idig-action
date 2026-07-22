@@ -28,12 +28,13 @@ async function execution(idigHost, platformIdigPrefix, workspacePath, changedFol
     try {
         core.info(`IDIG Host ${idigHost}`);
         const resp = await publishProjects(workspacePath, changedFolders, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized);
-        core.info(`response: status: ${resp.status}, message: ${resp.message[0]}`);
+        core.info(`response: ${JSON.stringify(resp)}`);
 
-        core.setOutput('action-result', `response: status: ${resp.status}, message: ${resp.message[0]}`);
+        core.setOutput('action-result', JSON.stringify(resp));
 
         if (![ 200, 201, 304 ].includes(resp.status)) {
-            core.setFailed(resp.message[0]);
+            const errMsg = Array.isArray(resp.message) ? resp.message[0] : JSON.stringify(resp);
+            core.setFailed(errMsg);
         }
     } catch (error) {
         core.setFailed(error.message);
