@@ -1,7 +1,8 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const axios = require('axios');
+const https = require('https');
+const FormData = require('form-data');
 const AdmZip = require('adm-zip');
 
 const outputFile = 'studioProjectFiles.zip';
@@ -27,8 +28,12 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
     const zipPath = zipFolders(workspacePath, folders);
     console.log(`Zip created at: ${zipPath}`);
     const curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/publish`;
-    const zipFile = fs.readFileSync(zipPath).toString('base64');
-    const resp = await createOrUpdateProjects(curlUrl, { zipFile }, 'POST');
+    const formData = new FormData();
+    formData.append('zipFile', fs.createReadStream(zipPath), {
+        filename: outputFile,
+        contentType: 'application/zip'
+    });
+    const resp = await createOrUpdateProjects(curlUrl, formData, 'POST');
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
     });
@@ -43,20 +48,40 @@ let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, 
     return null;
 }
 
-let createOrUpdateProjects = async function(curlUrl, bodyContent, method) {
+let createOrUpdateProjects = function(curlUrl, formData, method) {
     console.log('createOrUpdateProjects');
-    try {
-        const res = await axios.post(curlUrl, bodyContent);
-        if (res.status === 201 || res.status === 200) {
-            return { status: res.status, message: [ `${method} operation has been successful` ] };
-        }
-        return res.data;
-    } catch (err) {
-        const status = err.response?.status || 500;
-        const message = err.response?.data?.message || [ err.message || String(err) ];
-        console.log(`Error status: ${status}, message: ${JSON.stringify(message)}`);
-        return { status, message };
-    }
+    return new Promise((resolve) => {
+        const url = new URL(curlUrl);
+        const headers = formData.getHeaders({ Accept: 'application/json' });
+        const options = {
+            hostname: url.hostname,
+            port: url.port || 443,
+            path: url.pathname,
+            method: 'POST',
+            headers
+        };
+        const req = https.request(options, (res) => {
+            let body = '';
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+                let data;
+                try { data = JSON.parse(body); } catch { data = body; }
+                console.log(`Response status: ${res.statusCode}`);
+                if (res.statusCode === 200 || res.statusCode === 201) {
+                    resolve({ status: res.statusCode, message: [ `${method} operation has been successful` ] });
+                } else {
+                    const message = data?.message || [ body ];
+                    console.log(`Error status: ${res.statusCode}, message: ${JSON.stringify(message)}`);
+                    resolve({ status: res.statusCode, message });
+                }
+            });
+        });
+        req.on('error', (err) => {
+            console.log(`Request error: ${err.message}`);
+            resolve({ status: 500, message: [ err.message ] });
+        });
+        formData.pipe(req);
+    });
 };
 
 module.exports = { publishProjects, deleteProjects }
