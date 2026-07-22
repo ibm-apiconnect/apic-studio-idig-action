@@ -35911,21 +35911,15 @@ let deleteProjects = async function(workspacePath, idigHost, platformApiPrefix, 
 let createOrUpdateProjects = async function(curlUrl, bodyContent, method) {
     console.log('createOrUpdateProjects');
     try {
-        const resp = await axios.post(curlUrl, bodyContent, {
-            maxContentLength: Infinity,
-            maxBodyLength: Infinity,
+        const res = await axios.post(curlUrl, bodyContent, {
             headers: {
-                Accept: 'application/json',
-                ...bodyContent.getHeaders()
+                Accept: 'application/json'
             }
-        })
-        .then(function(res) {
-            if (res.status === 201 || res.status === 200) {
-                return { status: res.status, message: [ `${method} operation has been successful` ] };
-            }
-            return res.json();
         });
-        return resp;
+        if (res.status === 201 || res.status === 200) {
+            return { status: res.status, message: [ `${method} operation has been successful` ] };
+        }
+        return res.data;
     } catch (err) {
         const status = err.response?.status || 500;
         const message = err.response?.data?.message || [ err.message || String(err) ];
