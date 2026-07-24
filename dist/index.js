@@ -33812,7 +33812,7 @@ async function run() {
     if (changedFolders.length !== 0 || deletedFiles.length !== 0) {
         await execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, deletedFiles, nodeTlsRejectUnauthorized);
     } else {
-        core.setOutput('action-result', 'No files changed from the previous commit to send to Discovery Service');
+        core.setOutput('action-result', 'No files changed from the previous commit to publish to IDIG Broker');
     }
   } catch (err) {
     core.setFailed(err.message);
