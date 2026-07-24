@@ -8,7 +8,7 @@ async function run() {
     const idigHost = core.getInput('idig_host');
     const filesChanged = core.getInput('changed_files');
     const deletedFilesContent = core.getInput('deleted_files_content');
-    const platformIdigPrefix = core.getInput('platform_idig_prefix') ? core.getInput('platform_idig_prefix') : 'idig';
+    const platformIdigPrefix = core.getInput('platform_idig_prefix') ? core.getInput('platform_idig_prefix') : 'idig-broker';
     const nodeTlsRejectUnauthorized = (core.getInput('insecure_skip_tls_verify').toLowerCase() === 'true');
     
     const changedFolders = filesChanged.trim()
