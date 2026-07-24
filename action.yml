@@ -10,6 +10,9 @@ inputs:
   changed_files:
     description: 'Files changed between current and previous commit'
     required: false
+  deleted_files_content:
+    description: 'Deleted files from previous commit'
+    required: false
   insecure_skip_tls_verify:
     description: 'Insecure Skip TLS verify to allow self signed certs'
     required: false
