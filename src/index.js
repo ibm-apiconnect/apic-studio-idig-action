@@ -10,6 +10,8 @@ async function run() {
     const deletedFilesContent = core.getInput('deleted_files_content');
     const platformIdigPrefix = core.getInput('platform_idig_prefix') ? core.getInput('platform_idig_prefix') : 'idig-broker';
     const nodeTlsRejectUnauthorized = (core.getInput('insecure_skip_tls_verify').toLowerCase() === 'true');
+    const authUsername = core.getInput('auth_username');
+    const authPassword = core.getInput('auth_password');
     
     const changedFolders = filesChanged.trim()
       ? [...new Set(filesChanged.trim().split(/\s+/).map(f => f.split('/')[0]))]
@@ -17,7 +19,7 @@ async function run() {
     const deletedFiles = deletedFilesContent.trim() ? JSON.parse(deletedFilesContent) : [];
     
     if (changedFolders.length !== 0 || deletedFiles.length !== 0) {
-        await execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, deletedFiles, nodeTlsRejectUnauthorized);
+        await execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, deletedFiles, nodeTlsRejectUnauthorized, authUsername, authPassword);
     } else {
         core.setOutput('action-result', 'No files changed from the previous commit to publish to IDIG Broker');
     }
@@ -26,13 +28,13 @@ async function run() {
   }
 }
 
-async function execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, deletedFiles, nodeTlsRejectUnauthorized) {
+async function execution(idigHost, platformIdigPrefix, workspacePath, changedFolders, deletedFiles, nodeTlsRejectUnauthorized, authUsername, authPassword) {
     try {
         core.info(`IDIG Host ${idigHost}`);
         const responses = [];
 
         if (changedFolders.length !== 0) {
-            const publishResponse = await publishProjects(workspacePath, changedFolders, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized);
+            const publishResponse = await publishProjects(workspacePath, changedFolders, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized, authUsername, authPassword);
             core.info(`publish response: ${JSON.stringify(publishResponse)}`);
             responses.push({ publishedProjects: publishResponse });
 
@@ -45,7 +47,7 @@ async function execution(idigHost, platformIdigPrefix, workspacePath, changedFol
         }
 
         if (deletedFiles.length !== 0) {
-            const deleteResponse = await deleteProjects(workspacePath, deletedFiles, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized);
+            const deleteResponse = await deleteProjects(workspacePath, deletedFiles, idigHost, platformIdigPrefix, nodeTlsRejectUnauthorized, authUsername, authPassword);
             core.info(`delete response: ${JSON.stringify(deleteResponse)}`);
             responses.push({ deletedProjects: deleteResponse });
 

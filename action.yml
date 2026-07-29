@@ -16,6 +16,12 @@ inputs:
   insecure_skip_tls_verify:
     description: 'Insecure Skip TLS verify to allow self signed certificates'
     required: false
+  auth_username:
+    description: 'Authentication username'
+    required: false
+  auth_password:
+    description: 'Authentication password'
+    required: false
 
 outputs:
   action-result:

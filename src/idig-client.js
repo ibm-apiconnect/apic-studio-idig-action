@@ -21,7 +21,7 @@ let zipFolders = function(workspacePath, folders) {
     return outputPath;
 };
 
-let publishProjects = async function(workspacePath, folders, idigHost, platformApiPrefix, nodeTlsRejectUnauthorized) {
+let publishProjects = async function(workspacePath, folders, idigHost, platformApiPrefix, nodeTlsRejectUnauthorized, authUsername, authPassword) {
     if (nodeTlsRejectUnauthorized) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
@@ -34,7 +34,7 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
         filename: outputFile,
         contentType: 'application/zip'
     });
-    const response = await createOrUpdateProjects(curlUrl, formData, 'POST');
+    const response = await createOrUpdateProjects(curlUrl, formData, 'POST', authUsername, authPassword);
     core.info(`Response: ${JSON.stringify(response)}`);
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
@@ -42,7 +42,7 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
     return response;
 }
 
-let deleteProjects = async function(workspacePath, deletedFiles, idigHost, platformApiPrefix, nodeTlsRejectUnauthorized) {
+let deleteProjects = async function(workspacePath, deletedFiles, idigHost, platformApiPrefix, nodeTlsRejectUnauthorized, authUsername, authPassword) {
     if (nodeTlsRejectUnauthorized) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
@@ -76,13 +76,17 @@ let deleteProjects = async function(workspacePath, deletedFiles, idigHost, platf
     }
 
     const curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/published-assets`;
-    return deletePublishedAssets(curlUrl, body);
+    return deletePublishedAssets(curlUrl, body, authUsername, authPassword);
 }
 
-let createOrUpdateProjects = function(curlUrl, formData, method) {
+let createOrUpdateProjects = function(curlUrl, formData, method, authUsername, authPassword) {
     return new Promise((resolve) => {
         const url = new URL(curlUrl);
-        const headers = formData.getHeaders({ Accept: 'application/json' });
+        const extraHeaders = { Accept: 'application/json' };
+        if (authUsername && authPassword) {
+            extraHeaders['Authorization'] = 'Basic ' + Buffer.from(`${authUsername}:${authPassword}`).toString('base64');
+        }
+        const headers = formData.getHeaders(extraHeaders);
         const options = {
             hostname: url.hostname,
             port: url.port || 443,
@@ -140,20 +144,24 @@ let parseSimpleYaml = function(content) {
     return result;
 };
 
-let deletePublishedAssets = function(curlUrl, body) {
+let deletePublishedAssets = function(curlUrl, body, authUsername, authPassword) {
     return new Promise((resolve) => {
         const url = new URL(curlUrl);
         const requestBody = JSON.stringify(body);
+        const headers = {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'Content-Length': Buffer.byteLength(requestBody)
+        };
+        if (authUsername && authPassword) {
+            headers['Authorization'] = 'Basic ' + Buffer.from(`${authUsername}:${authPassword}`).toString('base64');
+        }
         const options = {
             hostname: url.hostname,
             port: url.port || 443,
             path: url.pathname,
             method: 'DELETE',
-            headers: {
-                Accept: 'application/json',
-                'Content-Type': 'application/json',
-                'Content-Length': Buffer.byteLength(requestBody)
-            }
+            headers
         };
         const request = https.request(options, (response) => {
             let responseBody = '';
