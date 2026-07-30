@@ -18,8 +18,8 @@ The following parameters are always required:
 - AUTH_USERNAME - The username value obtained from the Github Action created secret `IDIG_USERNAME`. For more information on secret creation see [here](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets#creating-encrypted-secrets-for-a-repository). For the sample below the username secret should be called `IDIG_USERNAME` as it will need to match the following templated value ${{ secrets.IDIG_USERNAME }}.
 - AUTH_PASSWORD - The password value obtained from the Github Action created secret `IDIG_PASSWORD`. For more information on secret creation see [here](https://docs.github.com/en/actions/how-tos/write-workflows/choose-what-workflows-do/use-secrets#creating-encrypted-secrets-for-a-repository). For the sample below the password secret should be called `IDIG_PASSWORD` as it will need to match the following templated value ${{ secrets.IDIG_PASSWORD }}.
 
-**Important**  
-The secrets can be obtained from the list of secrets in your openshift cluster. The secret should be present in the same namespace as your IDIG broker deployment. The username and password data as part of the secret should be decoded first from base64 before adding them to your Github action repository such as the `apic-studio-idig-test` repository as seen [here](https://github.com/ibm-apiconnect/apic-studio-idig-test)
+**Important:** 
+The secrets can be obtained from the list of secrets in your openshift cluster. The secret should be present in the same namespace as your IDIG broker deployment. The username and password data as part of the secret should be decoded first from base64 before adding them to your Github action repository such as the `apic-studio-idig-test` repository as seen [here](https://github.com/ibm-apiconnect/apic-studio-idig-test).
 
 To create the workflow action in your GitHub repository do the following
 1. Create a .github/workflows directory in your repository on GitHub if this directory does not already exist.
