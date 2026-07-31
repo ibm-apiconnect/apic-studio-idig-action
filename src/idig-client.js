@@ -22,6 +22,10 @@ let zipFolders = function(workspacePath, folders) {
 };
 
 let publishProjects = async function(workspacePath, folders, idigHost, platformApiPrefix, nodeTlsRejectUnauthorized, authUsername, authPassword) {
+    if (!authUsername || !authPassword) {
+        core.setFailed('auth-username and auth-password credential values are missing.');
+        return;
+    }
     if (nodeTlsRejectUnauthorized) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
@@ -43,6 +47,10 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
 }
 
 let deleteProjects = async function(workspacePath, deletedFiles, idigHost, platformApiPrefix, nodeTlsRejectUnauthorized, authUsername, authPassword) {
+    if (!authUsername || !authPassword) {
+        core.setFailed('auth-username and auth-password credential values are missing.');
+        return;
+    }
     if (nodeTlsRejectUnauthorized) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
