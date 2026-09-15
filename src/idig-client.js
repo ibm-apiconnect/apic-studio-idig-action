@@ -30,6 +30,8 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
 
+    const token = await federatedLogin(idigHost, platformApiPrefix, authUsername, authPassword);
+
     const zipPath = zipFolders(workspacePath, folders);
     console.log(`Zip created at: ${zipPath}`);
     const curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/publish`;
@@ -38,7 +40,7 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
         filename: outputFile,
         contentType: 'application/zip'
     });
-    const response = await createOrUpdateProjects(curlUrl, formData, 'POST', authUsername, authPassword);
+    const response = await createOrUpdateProjects(curlUrl, formData, 'POST', authUsername, authPassword, token);
     core.info(`Response: ${JSON.stringify(response)}`);
     fs.unlink(zipPath, (err) => {
         if (err) throw err;
@@ -54,6 +56,8 @@ let deleteProjects = async function(workspacePath, deletedFiles, idigHost, platf
     if (nodeTlsRejectUnauthorized) {
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
+
+    const token = await federatedLogin(idigHost, platformApiPrefix, authUsername, authPassword);
 
     const body = {};
 
@@ -84,15 +88,54 @@ let deleteProjects = async function(workspacePath, deletedFiles, idigHost, platf
     }
 
     const curlUrl = `https://${platformApiPrefix}.${idigHost}/idig-broker/published-assets`;
-    return deletePublishedAssets(curlUrl, body, authUsername, authPassword);
+    return deletePublishedAssets(curlUrl, body, authUsername, authPassword, token);
 }
 
-let createOrUpdateProjects = function(curlUrl, formData, method, authUsername, authPassword) {
+// Attempts to obtain a JWT via /api/v1/federated-login.
+let getAccessToken = function(idigHost, platformApiPrefix, authUsername, authPassword) {
+    return new Promise((resolve) => {
+        const url = new URL(`https://${platformApiPrefix}.${idigHost}/api/v1/federated-login`);
+        const requestBody = JSON.stringify({ username: authUsername, password: authPassword });
+        const options = {
+            hostname: url.hostname,
+            port: url.port || 443,
+            path: url.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(requestBody)
+            }
+        };
+        const request = https.request(options, (response) => {
+            const cookies = response.headers['set-cookie'] || [];
+            for (const cookie of cookies) {
+                const match = cookie.match(/accesstoken=(eyJ[^;]+)/);
+                if (match) {
+                    core.info('Access token obtained — using Bearer token auth');
+                    return resolve(match[1]);
+                }
+            }
+            resolve(null);
+        });
+        request.on('error', () => resolve(null));
+        request.write(requestBody);
+        request.end();
+    });
+};
+
+let authHeader = function(authUsername, authPassword, token) {
+    if (token) {
+        return `Bearer ${token}`;
+    }
+    return 'Basic ' + Buffer.from(`${authUsername}:${authPassword}`).toString('base64');
+};
+
+let createOrUpdateProjects = function(curlUrl, formData, method, authUsername, authPassword, token) {
     return new Promise((resolve) => {
         const url = new URL(curlUrl);
         const extraHeaders = { Accept: 'application/json' };
         if (authUsername && authPassword) {
-            extraHeaders['Authorization'] = 'Basic ' + Buffer.from(`${authUsername}:${authPassword}`).toString('base64');
+            extraHeaders['Authorization'] = authHeader(authUsername, authPassword, token);
         }
         const headers = formData.getHeaders(extraHeaders);
         const options = {
@@ -152,7 +195,7 @@ let parseSimpleYaml = function(content) {
     return result;
 };
 
-let deletePublishedAssets = function(curlUrl, body, authUsername, authPassword) {
+let deletePublishedAssets = function(curlUrl, body, authUsername, authPassword, token) {
     return new Promise((resolve) => {
         const url = new URL(curlUrl);
         const requestBody = JSON.stringify(body);
@@ -162,7 +205,7 @@ let deletePublishedAssets = function(curlUrl, body, authUsername, authPassword) 
             'Content-Length': Buffer.byteLength(requestBody)
         };
         if (authUsername && authPassword) {
-            headers['Authorization'] = 'Basic ' + Buffer.from(`${authUsername}:${authPassword}`).toString('base64');
+            headers['Authorization'] = authHeader(authUsername, authPassword, token);
         }
         const options = {
             hostname: url.hostname,
