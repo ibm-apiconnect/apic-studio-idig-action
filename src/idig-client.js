@@ -30,7 +30,7 @@ let publishProjects = async function(workspacePath, folders, idigHost, platformA
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
 
-    const token = await federatedLogin(idigHost, platformApiPrefix, authUsername, authPassword);
+    const token = await getAccessToken(idigHost, platformApiPrefix, authUsername, authPassword);
 
     const zipPath = zipFolders(workspacePath, folders);
     console.log(`Zip created at: ${zipPath}`);
@@ -57,7 +57,7 @@ let deleteProjects = async function(workspacePath, deletedFiles, idigHost, platf
         process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     }
 
-    const token = await federatedLogin(idigHost, platformApiPrefix, authUsername, authPassword);
+    const token = await getAccessToken(idigHost, platformApiPrefix, authUsername, authPassword);
 
     const body = {};
 
