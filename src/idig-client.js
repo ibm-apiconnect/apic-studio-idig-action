@@ -101,6 +101,7 @@ let getAccessToken = function(idigHost, platformApiPrefix, authUsername, authPas
             port: url.port || 443,
             path: url.pathname,
             method: 'POST',
+            rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
             headers: {
                 'Content-Type': 'application/json',
                 'Content-Length': Buffer.byteLength(requestBody)
@@ -115,9 +116,13 @@ let getAccessToken = function(idigHost, platformApiPrefix, authUsername, authPas
                     return resolve(match[1]);
                 }
             }
+            core.info(`Federated login returned status ${response.statusCode} — no access token found, falling back to Basic Auth`);
             resolve(null);
         });
-        request.on('error', () => resolve(null));
+        request.on('error', (err) => {
+            core.info(`Federated login failed (${err.message}) — falling back to Basic Auth`);
+            resolve(null);
+        });
         request.write(requestBody);
         request.end();
     });
@@ -143,6 +148,7 @@ let createOrUpdateProjects = function(curlUrl, formData, method, authUsername, a
             port: url.port || 443,
             path: url.pathname,
             method: 'POST',
+            rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
             headers
         };
         const request = https.request(options, (response) => {
@@ -212,6 +218,7 @@ let deletePublishedAssets = function(curlUrl, body, authUsername, authPassword, 
             port: url.port || 443,
             path: url.pathname,
             method: 'DELETE',
+            rejectUnauthorized: process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0',
             headers
         };
         const request = https.request(options, (response) => {
