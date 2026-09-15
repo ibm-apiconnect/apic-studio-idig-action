@@ -93,6 +93,8 @@ let deleteProjects = async function(workspacePath, deletedFiles, idigHost, platf
 
 // Attempts to obtain a JWT via /api/v1/federated-login.
 let getAccessToken = function(idigHost, platformApiPrefix, authUsername, authPassword) {
+    console.log(`getAccessToken: attempting https://${platformApiPrefix}.${idigHost}/api/v1/federated-login`);
+    console.log(`getAccessToken: rejectUnauthorized=${process.env.NODE_TLS_REJECT_UNAUTHORIZED !== '0'}`);
     return new Promise((resolve) => {
         const url = new URL(`https://${platformApiPrefix}.${idigHost}/api/v1/federated-login`);
         const requestBody = JSON.stringify({ username: authUsername, password: authPassword });
@@ -108,19 +110,20 @@ let getAccessToken = function(idigHost, platformApiPrefix, authUsername, authPas
             }
         };
         const request = https.request(options, (response) => {
+            console.log(`getAccessToken: response status ${response.statusCode}`);
             const cookies = response.headers['set-cookie'] || [];
             for (const cookie of cookies) {
                 const match = cookie.match(/accesstoken=(eyJ[^;]+)/);
                 if (match) {
-                    core.info('Access token obtained — using Bearer token auth');
+                    console.log('getAccessToken: token found, using Bearer auth');
                     return resolve(match[1]);
                 }
             }
-            core.info(`Federated login returned status ${response.statusCode} — no access token found, falling back to Basic Auth`);
+            console.log('getAccessToken: no accesstoken cookie — falling back to Basic Auth');
             resolve(null);
         });
         request.on('error', (err) => {
-            core.info(`Federated login failed (${err.message}) — falling back to Basic Auth`);
+            console.log(`getAccessToken: request error — ${err.message}`);
             resolve(null);
         });
         request.write(requestBody);
