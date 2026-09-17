@@ -1,0 +1,164 @@
+#---------------------------------------------------------------------------
+# Standalone IDIG - private cluster
+#
+# Use this when your IDIG broker is on a private network or behind a VPN
+# (i.e. GitHub-hosted runners cannot reach it directly).
+#
+# This workflow requires a self-hosted GitHub Actions runner deployed inside
+# your cluster. See docs/runner/RUNNER_SETUP.md for setup instructions.
+#
+# If your cluster is publicly reachable, use
+# idig_publish_public.yml instead.
+#
+# Required secrets:
+#   IDIG_USERNAME   - IDIG admin username
+#   IDIG_PASSWORD   - IDIG admin password
+#
+# Required env vars (set below):
+#   IDIG_BROKER_HOST      - hostname or apps domain of your cluster,
+#                           e.g. apps.my-cluster.example.com
+#   PLATFORM_IDIG_PREFIX  - route/ingress prefix for the IDIG broker, typically 'idig'
+#---------------------------------------------------------------------------
+
+name: Publish API Studio changes to IDIG
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+env:
+  IDIG_BROKER_HOST: <your-cluster-domain>        # e.g. apps.my-cluster.example.com
+  PLATFORM_IDIG_PREFIX: idig
+
+jobs:
+  discover-changes:
+    name: Discover changed files and deleted asset definitions
+    runs-on: self-hosted
+    outputs:
+      changed_files: ${{ steps.difference.outputs.changed_files }}
+      deleted_files_content: ${{ steps.difference.outputs.deleted_files_content }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Collect changed files and deleted file contents from previous commit
+        id: difference
+        run: |
+          files=$(git diff --name-only HEAD~1 HEAD)
+          deleted_files=$(git diff --diff-filter=D --name-only HEAD~1 HEAD)
+          deleted_files_content='[]'
+
+          if [ -n "$deleted_files" ]; then
+            deleted_files_content=$(
+              echo "$deleted_files" | while IFS= read -r file; do
+                [ -n "$file" ] || continue
+                content=$(git show "HEAD~1:$file" | base64 | tr -d '\n')
+                printf '{"path":"%s","content":"%s"}\n' "$file" "$content"
+              done | jq -R -s 'split("\n") | map(select(length > 0) | fromjson)'
+            )
+          fi
+
+          files_oneline=$(echo "$files" | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+          echo "Changed files in this push: $files_oneline"
+          echo "changed_files=$files_oneline" >> "$GITHUB_OUTPUT"
+          echo "deleted_files_content<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$deleted_files_content" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
+  publish-changes:
+    name: Publish changed folders and delete removed published assets
+    runs-on: self-hosted
+    needs: discover-changes
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Obtain IDIG access token
+        id: auth
+        env:
+          IDIG_USER: ${{ secrets.IDIG_USERNAME }}
+          IDIG_PASS: ${{ secrets.IDIG_PASSWORD }}
+        run: |
+          LOGIN_BODY=$(jq -cn --arg u "$IDIG_USER" --arg p "$IDIG_PASS" '{username:$u,password:$p}')
+          HEADERS=$(curl -k -s -o /dev/null -D - \
+            https://${{ env.PLATFORM_IDIG_PREFIX }}.${{ env.IDIG_BROKER_HOST }}/api/v1/federated-login \
+            -H 'Content-Type: application/json' \
+            -d "$LOGIN_BODY")
+          TOKEN=$(echo "$HEADERS" | grep -i 'set-cookie:.*accesstoken=' | \
+            sed 's/.*accesstoken=\(eyJ[^;]*\).*/\1/' | tr -d '\r')
+          if [ -z "$TOKEN" ]; then
+            echo "ERROR: Failed to obtain access token - check IDIG_USERNAME and IDIG_PASSWORD secrets"
+            exit 1
+          fi
+          echo "::add-mask::$TOKEN"
+          echo "idig_token=$TOKEN" >> "$GITHUB_OUTPUT"
+
+      - name: Publish changed project folders
+        if: ${{ needs.discover-changes.outputs.changed_files != '' }}
+        run: |
+          FOLDERS=$(echo "${{ needs.discover-changes.outputs.changed_files }}" | \
+            tr ' ' '\n' | awk -F/ 'NF>1{print $1}' | sort -u)
+          if [ -z "$FOLDERS" ]; then
+            echo "No project folders to publish"
+            exit 0
+          fi
+          echo "Publishing folders: $FOLDERS"
+          zip -r studioProjectFiles.zip $FOLDERS
+          RESPONSE=$(curl -k -s \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.idig_token }}" \
+            -H "Accept: application/json" \
+            -F "project=@studioProjectFiles.zip;type=application/zip" \
+            https://${{ env.PLATFORM_IDIG_PREFIX }}.${{ env.IDIG_BROKER_HOST }}/idig-broker/publish)
+          echo "Publish response: $RESPONSE"
+          TOTAL=$(echo "$RESPONSE" | jq -r '.total_results // empty')
+          STATUS=$(echo "$RESPONSE" | jq -r '.status // empty')
+          if [ -n "$TOTAL" ]; then
+            echo "Publish successful (total_results: $TOTAL)"
+          elif [ "$STATUS" = "200" ] || [ "$STATUS" = "201" ] || [ "$STATUS" = "304" ]; then
+            echo "Publish successful (status: $STATUS)"
+          else
+            echo "ERROR: Publish failed - response: $RESPONSE"
+            exit 1
+          fi
+
+      - name: Delete removed published assets
+        if: ${{ needs.discover-changes.outputs.deleted_files_content != '[]' && needs.discover-changes.outputs.deleted_files_content != '' }}
+        env:
+          DELETED_FILES_CONTENT: ${{ needs.discover-changes.outputs.deleted_files_content }}
+        run: |
+          BODY=$(echo "$DELETED_FILES_CONTENT" | jq -c '
+            reduce .[] as $f (
+              {};
+              ($f.content | @base64d) as $yaml |
+              ($yaml | split("\n") | map(select(startswith("kind:"))) | .[0] | split(": ")[1] // "") as $kind |
+              ($yaml | split("\n") | map(select(startswith("  namespace:"))) | .[0] | ltrimstr("  namespace: ") | ltrimstr(" ")) as $ns |
+              ($yaml | split("\n") | map(select(startswith("  name:"))) | .[0] | ltrimstr("  name: ") | ltrimstr(" ")) as $name |
+              ($yaml | split("\n") | map(select(startswith("  version:"))) | .[0] | ltrimstr("  version: ") | ltrimstr(" ") | gsub("\""; "")) as $ver |
+              if ($kind == "MCPServer" or $kind == "LLM") and ($name != "") and ($ver != "") then
+                .[$ns] //= {"mcpServers":[],"llms":[]} |
+                if $kind == "MCPServer" then .[$ns].mcpServers += ["\($name):\($ver)"]
+                else .[$ns].llms += ["\($name):\($ver)"] end
+              else . end
+            )
+          ')
+          if [ "$BODY" = "{}" ] || [ -z "$BODY" ]; then
+            echo "No MCPServer or LLM assets to delete"
+            exit 0
+          fi
+          echo "Delete request body: $BODY"
+          RESPONSE=$(curl -k -s -X DELETE \
+            -H "Authorization: Bearer ${{ steps.auth.outputs.idig_token }}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -d "$BODY" \
+            https://${{ env.PLATFORM_IDIG_PREFIX }}.${{ env.IDIG_BROKER_HOST }}/idig-broker/published-assets)
+          echo "Delete response: $RESPONSE"
+          STATUS=$(echo "$RESPONSE" | jq -r '.status // 0')
+          if [ "$STATUS" != "200" ] && [ "$STATUS" != "201" ] && [ "$STATUS" != "304" ]; then
+            echo "ERROR: Delete failed - response: $RESPONSE"
+            exit 1
+          fi
