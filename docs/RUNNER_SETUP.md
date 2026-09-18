@@ -21,21 +21,21 @@ The runner pod runs entirely inside the cluster and communicates with GitHub out
 
 > **Note:** Replace `<namespace>` throughout this section with the OCP namespace where your IDIG instance is deployed.
 
-### Step 1 — Get a runner registration token
+### Step 1 - Get a runner registration token
 
 Go to your GitHub repository → **Settings → Actions → Runners → New self-hosted runner**.
 
-Select **Linux** and **x64**. GitHub will display a `config.sh` command that includes a `--token` argument. Copy the token value — it looks like `AABCD1234XXXX...`.
+Select **Linux** and **x64**. GitHub will display a `config.sh` command that includes a `--token` argument. Copy the token value - it looks like `AABCD1234XXXX...`.
 
 > **Note:** This token is single-use and expires after 1 hour. Generate it immediately before deploying the runner pod.
 
-### Step 2 — Create an ImageStream
+### Step 2 - Create an ImageStream
 
 ```bash
 oc create imagestream github-runner -n <namespace>
 ```
 
-### Step 3 — Build the runner image inside OCP
+### Step 3 - Build the runner image inside OCP
 
 The runner image must be built inside OCP because the `Containerfile` installs packages at build time using `dnf` (which requires root). This is not permitted at pod runtime under OCP's restricted security policy.
 
@@ -58,7 +58,7 @@ oc start-build github-runner \
 
 The build streams logs to your terminal. Wait for `Push successful` before continuing.
 
-### Step 4 — Store the registration token and repo URL
+### Step 4 - Store the registration token and repo URL
 
 ```bash
 oc create secret generic github-runner-secret \
@@ -67,7 +67,7 @@ oc create secret generic github-runner-secret \
   -n <namespace>
 ```
 
-### Step 5 — Deploy the runner
+### Step 5 - Deploy the runner
 
 ```bash
 oc apply -n <namespace> -f - <<EOF
@@ -117,7 +117,7 @@ spec:
 EOF
 ```
 
-### Step 6 — Verify
+### Step 6 - Verify
 
 ```bash
 oc logs -f deployment/github-runner -n <namespace>
@@ -152,7 +152,7 @@ oc rollout restart deployment/github-runner -n <namespace>
 
 ### Rebuilding the runner image
 
-If you update `.github/runner/Containerfile` (e.g. to bump the runner version), also update `.github/runner/Dockerfile` to match (they must be identical — `oc new-build --strategy=docker` requires the file to be named `Dockerfile`). If you are using `docs/runner/` instead, update those files accordingly. Then rebuild:
+If you update `.github/runner/Containerfile` (e.g. to bump the runner version), also update `.github/runner/Dockerfile` to match (they must be identical - `oc new-build --strategy=docker` requires the file to be named `Dockerfile`). If you are using `docs/runner/` instead, update those files accordingly. Then rebuild:
 
 ```bash
 oc start-build github-runner \
@@ -167,8 +167,6 @@ oc rollout restart deployment/github-runner -n <namespace>
 
 ## Vanilla Kubernetes
 
-> **Note:** These instructions have not yet been validated against a live cluster. Steps are correct in principle but may need adjusting depending on your cluster's configuration.
-
 ### Prerequisites
 
 - `kubectl` CLI configured for your cluster
@@ -176,7 +174,7 @@ oc rollout restart deployment/github-runner -n <namespace>
 
 > **Note:** Replace `<namespace>`, `<your-org>`, and `<your-repo>` throughout this section with your own values.
 
-### Step 1 — Get a runner registration token
+### Step 1 - Get a runner registration token
 
 Go to your GitHub repository → **Settings → Actions → Runners → New self-hosted runner**.
 
@@ -184,9 +182,9 @@ Select **Linux** and **x64**. Copy the token value from the `--token` argument i
 
 > **Note:** This token is single-use and expires after 1 hour. Generate it immediately before deploying the runner pod.
 
-### Step 2 — Build and push the runner image
+### Step 2 - Build and push the runner image
 
-The runner image is built and pushed to GHCR using a GitHub Actions workflow — no local Docker or Podman installation required.
+The runner image is built and pushed to GHCR using the included [`build-runner.yml`](../.github/workflows/build-runner.yml) GitHub Actions workflow - no local Docker or Podman installation required.
 
 Go to your repository → **Actions → Build runner image → Run workflow**.
 
@@ -194,7 +192,7 @@ The image will be pushed to `ghcr.io/<your-org>/github-runner:latest`.
 
 > **Note:** The `Containerfile` used by this workflow is expected at `.github/runner/Containerfile`. If you sourced the file from the [apic-studio-idig-action](https://github.com/ibm-apiconnect/apic-studio-idig-action) repo where it lives under `docs/runner/`, copy it to `.github/runner/` in your own repo first. The workflow triggers automatically whenever `.github/runner/Containerfile` changes.
 
-### Step 3 — Store the registration token and repo URL
+### Step 3 - Store the registration token and repo URL
 
 ```bash
 kubectl create secret generic github-runner-secret \
@@ -203,7 +201,7 @@ kubectl create secret generic github-runner-secret \
   -n <namespace>
 ```
 
-### Step 4 — Deploy the runner
+### Step 4 - Deploy the runner
 
 ```bash
 kubectl apply -n <namespace> -f - <<EOF
@@ -247,7 +245,7 @@ spec:
 EOF
 ```
 
-### Step 5 — Verify
+### Step 5 - Verify
 
 ```bash
 kubectl logs -f deployment/github-runner -n <namespace>
