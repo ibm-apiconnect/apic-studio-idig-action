@@ -184,7 +184,7 @@ Select **Linux** and **x64**. Copy the token value from the `--token` argument i
 
 ### Step 2 - Build and push the runner image
 
-The runner image is built and pushed to GHCR using the included [`build-runner.yml`](../.github/workflows/build-runner.yml) GitHub Actions workflow - no local Docker or Podman installation required.
+The runner image can be built and pushed to GHCR using the included [`build-runner.yml`](../docs/workflows/build-runner.yml) GitHub Actions workflow.
 
 Go to your repository → **Actions → Build runner image → Run workflow**.
 
