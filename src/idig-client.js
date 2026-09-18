@@ -111,6 +111,8 @@ let getAccessToken = function(idigHost, platformApiPrefix, authUsername, authPas
         };
         const request = https.request(options, (response) => {
             console.log(`getAccessToken: response status ${response.statusCode}`);
+            response.resume();
+            response.on('end', () => { request.destroy(); });
             const cookies = response.headers['set-cookie'] || [];
             for (const cookie of cookies) {
                 const match = cookie.match(/accesstoken=(eyJ[^;]+)/);
@@ -119,11 +121,11 @@ let getAccessToken = function(idigHost, platformApiPrefix, authUsername, authPas
                     return resolve(match[1]);
                 }
             }
-            console.log('getAccessToken: no accesstoken cookie — falling back to Basic Auth');
+            console.log('getAccessToken: no accesstoken cookie - falling back to Basic Auth');
             resolve(null);
         });
         request.on('error', (err) => {
-            console.log(`getAccessToken: request error — ${err.message}`);
+            console.log(`getAccessToken: request error - ${err.message}`);
             resolve(null);
         });
         request.write(requestBody);
@@ -158,6 +160,7 @@ let createOrUpdateProjects = function(curlUrl, formData, method, authUsername, a
             let body = '';
             response.on('data', (chunk) => { body += chunk; });
             response.on('end', () => {
+                request.destroy();
                 let data;
                 try { data = JSON.parse(body); } catch { data = body; }
                 if (response.statusCode === 200 || response.statusCode === 201) {
@@ -228,6 +231,7 @@ let deletePublishedAssets = function(curlUrl, body, authUsername, authPassword, 
             let responseBody = '';
             response.on('data', (chunk) => { responseBody += chunk; });
             response.on('end', () => {
+                request.destroy();
                 let data;
                 try { data = JSON.parse(responseBody); } catch { data = responseBody; }
                 if (response.statusCode === 200 || response.statusCode === 201) {
