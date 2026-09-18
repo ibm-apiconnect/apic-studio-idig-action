@@ -59,7 +59,7 @@ The full broker URL is constructed as `https://<PLATFORM_IDIG_PREFIX>.<IDIG_BROK
 
 Skip this section if you are using the public cluster variant.
 
-OCP's restricted security policy prevents installing packages at pod runtime — if you are on a vanilla Kubernetes cluster, follow the Vanilla Kubernetes section of [`docs/runner/RUNNER_SETUP.md`](runner/RUNNER_SETUP.md) instead. The steps below are for OCP. Full instructions are in [`docs/runner/RUNNER_SETUP.md`](runner/RUNNER_SETUP.md).
+OCP's restricted security policy prevents installing packages at pod runtime — if you are on a vanilla Kubernetes cluster, follow the Vanilla Kubernetes section of [`docs/RUNNER_SETUP.md`](RUNNER_SETUP.md) instead. The steps below are for OCP. Full instructions are in [`docs/RUNNER_SETUP.md`](RUNNER_SETUP.md).
 
 ### Step 1 - Get a runner registration token
 
@@ -85,7 +85,7 @@ oc new-build \
   -n <namespace>
 
 oc start-build github-runner \
-  --from-dir=docs/runner \
+  --from-dir=.github/runner \
   --follow \
   -n <namespace>
 ```
@@ -159,7 +159,7 @@ oc logs -f deployment/github-runner -n <namespace>
 
 Wait for `Listening for Jobs`. The runner will appear as **Idle** under **Settings → Actions → Runners** in GitHub.
 
-> The registration token is single-use. If the runner pod restarts you will need a new token - see [`docs/runner/RUNNER_SETUP.md`](runner/RUNNER_SETUP.md) for the update procedure.
+> The registration token is single-use. If the runner pod restarts you will need a new token - see [`docs/RUNNER_SETUP.md`](RUNNER_SETUP.md) for the update procedure.
 
 ---
 
