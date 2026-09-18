@@ -39,6 +39,8 @@ oc create imagestream github-runner -n <namespace>
 
 The runner image must be built inside OCP because the `Containerfile` installs packages at build time using `dnf` (which requires root). This is not permitted at pod runtime under OCP's restricted security policy.
 
+The `Containerfile` and `Dockerfile` are located in `docs/runner/` in this repository - we recommend copying them to `.github/runner/` in your own repo so all GitHub Actions related files are co-located.
+
 ```bash
 oc new-build \
   --name=github-runner \
@@ -49,7 +51,7 @@ oc new-build \
   -n <namespace>
 
 oc start-build github-runner \
-  --from-dir=docs/runner \
+  --from-dir=.github/runner \
   --follow \
   -n <namespace>
 ```
@@ -150,11 +152,11 @@ oc rollout restart deployment/github-runner -n <namespace>
 
 ### Rebuilding the runner image
 
-If you update `docs/runner/Containerfile` (e.g. to bump the runner version), also update `docs/runner/Dockerfile` to match (they must be identical — `oc new-build --strategy=docker` requires the file to be named `Dockerfile`), then rebuild:
+If you update `.github/runner/Containerfile` (e.g. to bump the runner version), also update `.github/runner/Dockerfile` to match (they must be identical — `oc new-build --strategy=docker` requires the file to be named `Dockerfile`). If you are using `docs/runner/` instead, update those files accordingly. Then rebuild:
 
 ```bash
 oc start-build github-runner \
-  --from-dir=docs/runner \
+  --from-dir=.github/runner \
   --follow \
   -n <namespace>
 
@@ -170,11 +172,9 @@ oc rollout restart deployment/github-runner -n <namespace>
 ### Prerequisites
 
 - `kubectl` CLI configured for your cluster
-- A container registry that your cluster can pull images from (e.g. Docker Hub, GHCR, or a private registry)
-- Docker or Podman available on your local machine to build and push the image
 - Cluster has outbound internet access to `github.com` on port 443
 
-> **Note:** Replace `<namespace>`, `<registry>`, `<your-org>`, and `<your-repo>` throughout this section with your own values.
+> **Note:** Replace `<namespace>`, `<your-org>`, and `<your-repo>` throughout this section with your own values.
 
 ### Step 1 — Get a runner registration token
 
@@ -186,10 +186,13 @@ Select **Linux** and **x64**. Copy the token value from the `--token` argument i
 
 ### Step 2 — Build and push the runner image
 
-```bash
-docker build -t <registry>/<your-org>/github-runner:latest -f docs/runner/Containerfile docs/runner
-docker push <registry>/<your-org>/github-runner:latest
-```
+The runner image is built and pushed to GHCR using a GitHub Actions workflow — no local Docker or Podman installation required.
+
+Go to your repository → **Actions → Build runner image → Run workflow**.
+
+The image will be pushed to `ghcr.io/<your-org>/github-runner:latest`.
+
+> **Note:** The `Containerfile` used by this workflow is expected at `.github/runner/Containerfile`. If you sourced the file from the [apic-studio-idig-action](https://github.com/ibm-apiconnect/apic-studio-idig-action) repo where it lives under `docs/runner/`, copy it to `.github/runner/` in your own repo first. The workflow triggers automatically whenever `.github/runner/Containerfile` changes.
 
 ### Step 3 — Store the registration token and repo URL
 
@@ -222,7 +225,7 @@ spec:
         runAsNonRoot: true
       containers:
       - name: runner
-        image: <registry>/<your-org>/github-runner:latest
+        image: ghcr.io/<your-org>/github-runner:latest
         env:
         - name: RUNNER_TOKEN
           valueFrom:
